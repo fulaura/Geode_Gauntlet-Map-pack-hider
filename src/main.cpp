@@ -82,37 +82,38 @@ static void filterArray(cocos2d::CCArray* arr) {
     }
 }
 
-static std::vector<GJMapPack*> getMasterUncompletedMapPacks() {
-    std::vector<GJMapPack*> uncompleted;
-    auto glm = GameLevelManager::sharedState();
-    if (!glm || !glm->m_savedPacks) return uncompleted;
+static void fillMapPacksArray(cocos2d::CCArray* levels) {
+    if (!levels) return;
 
-    std::map<int, GJMapPack*> sortedPacks;
-    for (auto [key, obj] : CCDictionaryExt<int, CCObject*>(glm->m_savedPacks)) {
-        if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-            if (!isCompletedPack(pack)) {
-                sortedPacks[pack->m_packID] = pack;
+    filterArray(levels);
+
+    if (levels->count() < 10) {
+        auto glm = GameLevelManager::sharedState();
+        if (glm && glm->m_savedPacks) {
+            for (auto [key, obj] : CCDictionaryExt<int, CCObject*>(glm->m_savedPacks)) {
+                if (levels->count() >= 10) break;
+                if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
+                    if (!isCompletedPack(pack) && !levels->containsObject(pack)) {
+                        levels->addObject(pack);
+                    }
+                }
+            }
+            for (auto [key, obj] : CCDictionaryExt<std::string, CCObject*>(glm->m_savedPacks)) {
+                if (levels->count() >= 10) break;
+                if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
+                    if (!isCompletedPack(pack) && !levels->containsObject(pack)) {
+                        levels->addObject(pack);
+                    }
+                }
             }
         }
     }
-    for (auto [key, obj] : CCDictionaryExt<std::string, CCObject*>(glm->m_savedPacks)) {
-        if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-            if (!isCompletedPack(pack)) {
-                sortedPacks[pack->m_packID] = pack;
-            }
-        }
-    }
-
-    for (auto& [id, pack] : sortedPacks) {
-        uncompleted.push_back(pack);
-    }
-    return uncompleted;
 }
 
 class $modify(MyCustomListView, CustomListView) {
     bool init(cocos2d::CCArray* entries, TableViewCellDelegate* delegate, float height, float width, int page, BoomListType type, float y) {
         if (type == BoomListType::MapPack && Mod::get()->getSettingValue<bool>("hide-completed-mappacks") && entries) {
-            filterArray(entries);
+            fillMapPacksArray(entries);
         }
         return CustomListView::init(entries, delegate, height, width, page, type, y);
     }
@@ -223,47 +224,26 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
 
     void setupLevelBrowser(cocos2d::CCArray* items) {
         if (m_searchObject && m_searchObject->m_searchType == SearchType::MapPack && Mod::get()->getSettingValue<bool>("hide-completed-mappacks")) {
-            auto uncompleted = getMasterUncompletedMapPacks();
-            if (!uncompleted.empty()) {
-                int totalCount = static_cast<int>(uncompleted.size());
-                int itemsPerPage = 10;
-                int totalPages = (totalCount + itemsPerPage - 1) / itemsPerPage;
-
-                int currentPage = m_searchObject->m_page;
-                if (currentPage >= totalPages && totalPages > 0) {
-                    currentPage = totalPages - 1;
-                    m_searchObject->m_page = currentPage;
-                }
-
-                int startIdx = currentPage * itemsPerPage;
-                int endIdx = std::min(totalCount, startIdx + itemsPerPage);
-
-                auto pageItems = CCArray::create();
-                for (int i = startIdx; i < endIdx; ++i) {
-                    pageItems->addObject(uncompleted[i]);
-                }
-
-                m_itemCount = totalCount;
-                m_pageStartIdx = startIdx;
-                m_pageEndIdx = endIdx;
-
-                LevelBrowserLayer::setupLevelBrowser(pageItems);
-
-                if (m_leftArrow) m_leftArrow->setVisible(currentPage > 0);
-                if (m_rightArrow) m_rightArrow->setVisible(currentPage + 1 < totalPages);
-                this->updatePageLabel();
-                return;
-            }
+            fillMapPacksArray(items);
+            if (m_levels) fillMapPacksArray(m_levels);
         }
-
         LevelBrowserLayer::setupLevelBrowser(items);
     }
 
     void loadLevelsFinished(cocos2d::CCArray* levels, char const* key, int type) {
         if (m_searchObject && m_searchObject->m_searchType == SearchType::MapPack && Mod::get()->getSettingValue<bool>("hide-completed-mappacks")) {
-            filterArray(levels);
-            if (m_levels) filterArray(m_levels);
-            setupLevelBrowser(levels);
+            if (levels) {
+                fillMapPacksArray(levels);
+                if (m_levels) fillMapPacksArray(m_levels);
+
+                if (levels->count() == 0) {
+                    if (m_searchObject->m_page < 6) {
+                        m_searchObject->m_page++;
+                        this->loadPage(m_searchObject);
+                        return;
+                    }
+                }
+            }
         }
         LevelBrowserLayer::loadLevelsFinished(levels, key, type);
     }
