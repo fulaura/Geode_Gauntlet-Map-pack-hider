@@ -1,8 +1,8 @@
 # Hide Completed Packs
 
-A Geometry Dash Geode mod by **RealNitroGame** that dynamically hides completed Map Packs and Gauntlets.
+Hides completed Map Packs and Gauntlets in Geometry Dash.
 
-## Features
-- **Separate Toggles**: Independently enable or disable hiding for Gauntlets and Map Packs.
-- **In-Game Toggle Button**: Quick "Hide Done" button right on the Gauntlets and Map Packs screens to toggle without opening mod settings.
-- **Clean Layout Repacking**: Gauntlets are repacked 2-per-page natively without leaving blank screens or broken page counts.
+- Separate toggles for Map Packs and Gauntlets.
+- In-game "Hide" toggle button on Map Packs and Gauntlets screens.
+
+Mod by RealNitroGame.

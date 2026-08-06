@@ -70,9 +70,9 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
             toggler->setID("hide-completed-toggler"_spr);
             menu->addChild(toggler);
 
-            auto label = CCLabelBMFont::create("Hide Done", "bigFont.fnt");
+            auto label = CCLabelBMFont::create("Hide", "bigFont.fnt");
             label->setScale(0.35f);
-            label->setPosition({winSize.width - 75.0f, 30.0f});
+            label->setPosition({winSize.width - 65.0f, 30.0f});
             label->setID("hide-completed-label"_spr);
             this->addChild(label, 100);
         }
@@ -123,9 +123,9 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
                 toggler->setID("hide-completed-toggler"_spr);
                 menu->addChild(toggler);
 
-                auto label = CCLabelBMFont::create("Hide Done", "bigFont.fnt");
+                auto label = CCLabelBMFont::create("Hide", "bigFont.fnt");
                 label->setScale(0.35f);
-                label->setPosition({winSize.width - 75.0f, 30.0f});
+                label->setPosition({winSize.width - 65.0f, 30.0f});
                 label->setID("hide-completed-label"_spr);
                 this->addChild(label, 100);
             }
