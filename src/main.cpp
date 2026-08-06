@@ -2,21 +2,42 @@
 #include <Geode/modify/GauntletSelectLayer.hpp>
 #include <Geode/modify/LevelBrowserLayer.hpp>
 #include <Geode/modify/CustomListView.hpp>
+#include <Geode/modify/MapPackCell.hpp>
 #include <Geode/binding/GameLevelManager.hpp>
 #include <Geode/binding/GJMapPack.hpp>
 #include <Geode/binding/GJSearchObject.hpp>
 
 using namespace geode::prelude;
 
-static bool isCompletedPack(GJMapPack* pack) {
-    if (!pack) return false;
-    if (pack->hasCompletedMapPack()) return true;
-    if (auto gsm = GameStatsManager::sharedState()) {
-        if (gsm->hasCompletedMapPack(pack->m_packID)) return true;
-        if (gsm->m_completedMappacks) {
-            auto keyStr = std::to_string(pack->m_packID);
-            if (gsm->m_completedMappacks->objectForKey(keyStr)) return true;
-            if (gsm->m_completedMappacks->objectForKey(pack->m_packID)) return true;
+static bool isCompletedPack(CCObject* obj) {
+    if (!obj) return false;
+    if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
+        if (pack->hasCompletedMapPack()) return true;
+        if (auto gsm = GameStatsManager::sharedState()) {
+            if (gsm->hasCompletedMapPack(pack->m_packID)) return true;
+            if (gsm->m_completedMappacks) {
+                auto keyStr = std::to_string(pack->m_packID);
+                if (gsm->m_completedMappacks->objectForKey(keyStr)) return true;
+                if (gsm->m_completedMappacks->objectForKey(pack->m_packID)) return true;
+            }
+        }
+    }
+    if (auto dict = typeinfo_cast<CCDictionary*>(obj)) {
+        if (auto idObj = dict->objectForKey("1")) {
+            int packID = 0;
+            if (auto strObj = typeinfo_cast<CCString*>(idObj)) {
+                packID = std::atoi(strObj->getCString());
+            }
+            if (packID > 0) {
+                if (auto gsm = GameStatsManager::sharedState()) {
+                    if (gsm->hasCompletedMapPack(packID)) return true;
+                    if (gsm->m_completedMappacks) {
+                        auto keyStr = std::to_string(packID);
+                        if (gsm->m_completedMappacks->objectForKey(keyStr)) return true;
+                        if (gsm->m_completedMappacks->objectForKey(packID)) return true;
+                    }
+                }
+            }
         }
     }
     return false;
@@ -29,18 +50,14 @@ static void filterDictionary(cocos2d::CCDictionary* dict) {
     std::vector<int> intKeys;
 
     for (auto [key, obj] : CCDictionaryExt<std::string, CCObject*>(dict)) {
-        if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-            if (isCompletedPack(pack)) {
-                strKeys.push_back(key);
-            }
+        if (isCompletedPack(obj)) {
+            strKeys.push_back(key);
         }
     }
 
     for (auto [key, obj] : CCDictionaryExt<int, CCObject*>(dict)) {
-        if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-            if (isCompletedPack(pack)) {
-                intKeys.push_back(key);
-            }
+        if (isCompletedPack(obj)) {
+            intKeys.push_back(key);
         }
     }
 
@@ -56,10 +73,8 @@ static void filterArray(cocos2d::CCArray* arr) {
     if (!arr) return;
     auto toRemove = CCArray::create();
     for (auto obj : CCArrayExt<CCObject*>(arr)) {
-        if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-            if (isCompletedPack(pack)) {
-                toRemove->addObject(pack);
-            }
+        if (isCompletedPack(obj)) {
+            toRemove->addObject(obj);
         }
     }
     for (auto obj : CCArrayExt<CCObject*>(toRemove)) {
@@ -69,10 +84,21 @@ static void filterArray(cocos2d::CCArray* arr) {
 
 class $modify(MyCustomListView, CustomListView) {
     bool init(cocos2d::CCArray* entries, TableViewCellDelegate* delegate, float height, float width, int page, BoomListType type, float y) {
-        if (type == BoomListType::MapPack && Mod::get()->getSettingValue<bool>("hide-completed-mappacks") && entries) {
+        if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks") && entries) {
             filterArray(entries);
         }
         return CustomListView::init(entries, delegate, height, width, page, type, y);
+    }
+};
+
+class $modify(MyMapPackCell, MapPackCell) {
+    void loadFromMapPack(GJMapPack* pack) {
+        MapPackCell::loadFromMapPack(pack);
+        if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks")) {
+            if (isCompletedPack(pack)) {
+                this->setVisible(false);
+            }
+        }
     }
 };
 
