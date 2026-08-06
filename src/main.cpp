@@ -5,21 +5,21 @@
 
 using namespace geode::prelude;
 
-static bool isCompletedGauntlet(GJMapPack* pack) {
+static bool isCompletedGauntlet(GJMapPack* pack, GameStatsManager* gsm) {
     if (!pack) return false;
-    return pack->hasCompletedMapPack() || 
-           GameStatsManager::sharedState()->hasCompletedMapPack(pack->m_packID);
+    return pack->hasCompletedMapPack() || (gsm && gsm->hasCompletedMapPack(pack->m_packID));
 }
 
 static void filterGauntletDictionary(cocos2d::CCDictionary* dict) {
     if (!dict) return;
 
+    auto gsm = GameStatsManager::sharedState();
     std::vector<std::string> strKeys;
     std::vector<int> intKeys;
 
     for (auto [key, obj] : CCDictionaryExt<std::string, CCObject*>(dict)) {
         if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-            if (isCompletedGauntlet(pack)) {
+            if (isCompletedGauntlet(pack, gsm)) {
                 strKeys.push_back(key);
             }
         }
@@ -27,7 +27,7 @@ static void filterGauntletDictionary(cocos2d::CCDictionary* dict) {
 
     for (auto [key, obj] : CCDictionaryExt<int, CCObject*>(dict)) {
         if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-            if (isCompletedGauntlet(pack)) {
+            if (isCompletedGauntlet(pack, gsm)) {
                 intKeys.push_back(key);
             }
         }
@@ -83,9 +83,6 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
         if (Mod::get()->getSettingValue<bool>("hide-completed-gauntlets")) {
             if (m_gauntlets) {
                 filterGauntletDictionary(m_gauntlets);
-            }
-            if (auto glm = GameLevelManager::sharedState()) {
-                filterGauntletDictionary(glm->m_savedGauntlets);
             }
         }
         GauntletSelectLayer::setupGauntlets();
