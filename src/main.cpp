@@ -12,37 +12,38 @@ static bool isCompletedPack(GJMapPack* pack) {
            GameStatsManager::sharedState()->hasCompletedMapPack(pack->m_packID);
 }
 
-static void filterDictionary(cocos2d::CCDictionary* dict) {
-    if (!dict) return;
+static cocos2d::CCDictionary* getFilteredGauntlets(cocos2d::CCDictionary* src) {
+    if (!src) return nullptr;
+    auto dict = CCDictionary::create();
 
-    std::vector<std::string> strKeys;
-    std::vector<int> intKeys;
-
-    for (auto [key, obj] : CCDictionaryExt<std::string, CCObject*>(dict)) {
+    for (auto [key, obj] : CCDictionaryExt<std::string, CCObject*>(src)) {
         if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-            if (isCompletedPack(pack)) {
-                strKeys.push_back(key);
+            if (!isCompletedPack(pack)) {
+                dict->setObject(obj, key);
             }
+        } else {
+            dict->setObject(obj, key);
         }
     }
 
-    for (auto [key, obj] : CCDictionaryExt<int, CCObject*>(dict)) {
+    for (auto [key, obj] : CCDictionaryExt<int, CCObject*>(src)) {
         if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-            if (isCompletedPack(pack)) {
-                intKeys.push_back(key);
+            if (!isCompletedPack(pack)) {
+                dict->setObject(obj, key);
             }
+        } else {
+            dict->setObject(obj, key);
         }
     }
 
-    for (const auto& k : strKeys) {
-        dict->removeObjectForKey(k);
-    }
-    for (int k : intKeys) {
-        dict->removeObjectForKey(k);
-    }
+    return dict;
 }
 
 class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
+    struct Fields {
+        cocos2d::CCDictionary* m_originalGauntlets = nullptr;
+    };
+
     bool init(int unused) {
         if (!GauntletSelectLayer::init(unused)) return false;
 
@@ -78,7 +79,14 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
     void setupGauntlets() {
         if (Mod::get()->getSettingValue<bool>("hide-completed-gauntlets")) {
             if (m_gauntlets) {
-                filterDictionary(m_gauntlets);
+                if (!m_fields->m_originalGauntlets) {
+                    m_fields->m_originalGauntlets = m_gauntlets;
+                }
+                m_gauntlets = getFilteredGauntlets(m_fields->m_originalGauntlets);
+            }
+        } else {
+            if (m_fields->m_originalGauntlets) {
+                m_gauntlets = m_fields->m_originalGauntlets;
             }
         }
         GauntletSelectLayer::setupGauntlets();
@@ -87,9 +95,7 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
     void onToggleHideCompleted(CCObject* sender) {
         bool current = Mod::get()->getSettingValue<bool>("hide-completed-gauntlets");
         Mod::get()->setSettingValue("hide-completed-gauntlets", !current);
-
-        auto scene = GauntletSelectLayer::scene(0);
-        CCDirector::sharedDirector()->replaceScene(scene);
+        CCDirector::sharedDirector()->replaceScene(CCTransitionFade::create(0.3f, GauntletSelectLayer::scene(0)));
     }
 };
 
@@ -130,36 +136,34 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
 
     void setupLevelBrowser(cocos2d::CCArray* items) {
         if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks") && items) {
-            auto filtered = CCArray::create();
+            auto toRemove = CCArray::create();
             for (auto obj : CCArrayExt<CCObject*>(items)) {
                 if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-                    if (!isCompletedPack(pack)) {
-                        filtered->addObject(pack);
+                    if (isCompletedPack(pack)) {
+                        toRemove->addObject(pack);
                     }
-                } else {
-                    filtered->addObject(obj);
                 }
             }
-            LevelBrowserLayer::setupLevelBrowser(filtered);
-            return;
+            for (auto obj : CCArrayExt<CCObject*>(toRemove)) {
+                items->removeObject(obj);
+            }
         }
         LevelBrowserLayer::setupLevelBrowser(items);
     }
 
     void loadLevelsFinished(cocos2d::CCArray* levels, char const* key, int type) {
         if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks") && levels) {
-            auto filtered = CCArray::create();
+            auto toRemove = CCArray::create();
             for (auto obj : CCArrayExt<CCObject*>(levels)) {
                 if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-                    if (!isCompletedPack(pack)) {
-                        filtered->addObject(pack);
+                    if (isCompletedPack(pack)) {
+                        toRemove->addObject(pack);
                     }
-                } else {
-                    filtered->addObject(obj);
                 }
             }
-            LevelBrowserLayer::loadLevelsFinished(filtered, key, type);
-            return;
+            for (auto obj : CCArrayExt<CCObject*>(toRemove)) {
+                levels->removeObject(obj);
+            }
         }
         LevelBrowserLayer::loadLevelsFinished(levels, key, type);
     }
@@ -168,10 +172,7 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
         bool current = Mod::get()->getSettingValue<bool>("hide-completed-mappacks");
         Mod::get()->setSettingValue("hide-completed-mappacks", !current);
         if (m_searchObject) {
-            auto scene = CCScene::create();
-            auto layer = LevelBrowserLayer::create(m_searchObject);
-            scene->addChild(layer);
-            CCDirector::sharedDirector()->replaceScene(scene);
+            this->loadPage(m_searchObject);
         }
     }
 };
