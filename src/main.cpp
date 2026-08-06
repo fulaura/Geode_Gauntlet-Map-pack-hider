@@ -1,8 +1,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/GauntletSelectLayer.hpp>
 #include <Geode/modify/LevelBrowserLayer.hpp>
-#include <Geode/binding/BoomScrollLayer.hpp>
-#include <Geode/binding/GauntletNode.hpp>
+#include <Geode/binding/GameLevelManager.hpp>
 #include <Geode/binding/GJMapPack.hpp>
 
 using namespace geode::prelude;
@@ -13,127 +12,56 @@ static bool isCompletedPack(GJMapPack* pack) {
            GameStatsManager::sharedState()->hasCompletedMapPack(pack->m_packID);
 }
 
+static void filterDictionary(cocos2d::CCDictionary* dict) {
+    if (!dict) return;
+
+    std::vector<std::string> strKeys;
+    std::vector<int> intKeys;
+
+    for (auto [key, obj] : CCDictionaryExt<std::string, CCObject*>(dict)) {
+        if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
+            if (isCompletedPack(pack)) {
+                strKeys.push_back(key);
+            }
+        }
+    }
+
+    for (auto [key, obj] : CCDictionaryExt<int, CCObject*>(dict)) {
+        if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
+            if (isCompletedPack(pack)) {
+                intKeys.push_back(key);
+            }
+        }
+    }
+
+    for (const auto& k : strKeys) {
+        dict->removeObjectForKey(k);
+    }
+    for (int k : intKeys) {
+        dict->removeObjectForKey(k);
+    }
+}
+
 class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
+    bool init(int unused) {
+        if (Mod::get()->getSettingValue<bool>("hide-completed")) {
+            if (auto glm = GameLevelManager::sharedState()) {
+                filterDictionary(glm->m_savedGauntlets);
+            }
+        }
+        return GauntletSelectLayer::init(unused);
+    }
+
     void setupGauntlets() {
+        if (Mod::get()->getSettingValue<bool>("hide-completed")) {
+            if (m_gauntlets) {
+                filterDictionary(m_gauntlets);
+            }
+            if (auto glm = GameLevelManager::sharedState()) {
+                filterDictionary(glm->m_savedGauntlets);
+            }
+        }
         GauntletSelectLayer::setupGauntlets();
-
-        if (!Mod::get()->getSettingValue<bool>("hide-completed")) return;
-        if (!m_scrollLayer || !m_scrollLayer->m_pages) return;
-
-        std::vector<GauntletNode*> activeNodes;
-        CCPoint posLeft = CCPointZero;
-        CCPoint posRight = CCPointZero;
-        bool foundLeft = false;
-        bool foundRight = false;
-
-        auto pages = m_scrollLayer->m_pages;
-        size_t originalPageCount = pages->count();
-
-        for (size_t p = 0; p < originalPageCount; ++p) {
-            auto page = typeinfo_cast<CCLayer*>(pages->objectAtIndex(p));
-            if (!page) continue;
-
-            auto children = page->getChildren();
-            if (!children) continue;
-
-            std::vector<cocos2d::CCNode*> childrenList;
-            for (auto childObj : CCArrayExt<cocos2d::CCNode*>(children)) {
-                childrenList.push_back(childObj);
-            }
-
-            for (auto childNode : childrenList) {
-                GauntletNode* gNode = typeinfo_cast<GauntletNode*>(childNode);
-                if (!gNode) {
-                    if (auto childChildren = childNode->getChildren()) {
-                        for (auto sub : CCArrayExt<cocos2d::CCNode*>(childChildren)) {
-                            if (auto g = typeinfo_cast<GauntletNode*>(sub)) {
-                                gNode = g;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (gNode && gNode->m_gauntlet) {
-                    if (isCompletedPack(gNode->m_gauntlet)) {
-                        childNode->removeFromParentAndCleanup(true);
-                    } else {
-                        if (!foundLeft) {
-                            posLeft = childNode->getPosition();
-                            foundLeft = true;
-                        } else if (!foundRight && (childNode->getPosition().x != posLeft.x)) {
-                            posRight = childNode->getPosition();
-                            foundRight = true;
-                        }
-                        activeNodes.push_back(gNode);
-                    }
-                }
-            }
-        }
-
-        if (activeNodes.empty()) {
-            pages->removeAllObjects();
-            m_scrollLayer->updatePages();
-            m_scrollLayer->updateDots(0);
-            return;
-        }
-
-        auto winSize = CCDirector::sharedDirector()->getWinSize();
-        if (!foundRight) {
-            posRight = CCPoint(winSize.width / 2.0f + 125.0f, posLeft.y);
-            if (!foundLeft) {
-                posLeft = CCPoint(winSize.width / 2.0f - 125.0f, winSize.height / 2.0f);
-            }
-        }
-
-        size_t neededPages = (activeNodes.size() + 1) / 2;
-
-        while (pages->count() < neededPages) {
-            auto newPage = CCLayer::create();
-            m_scrollLayer->addPage(newPage);
-        }
-
-        while (pages->count() > neededPages) {
-            size_t idx = pages->count() - 1;
-            auto pageToRemove = typeinfo_cast<CCLayer*>(pages->objectAtIndex(idx));
-            if (pageToRemove) {
-                pageToRemove->removeFromParentAndCleanup(true);
-            }
-            pages->removeObjectAtIndex(idx);
-        }
-
-        for (size_t i = 0; i < activeNodes.size(); ++i) {
-            size_t targetPageIndex = i / 2;
-            auto targetPage = typeinfo_cast<CCLayer*>(pages->objectAtIndex(targetPageIndex));
-            if (!targetPage) continue;
-
-            auto node = activeNodes[i];
-            cocos2d::CCNode* topNode = node;
-            if (node->getParent() && node->getParent() != targetPage) {
-                topNode = node->getParent();
-            }
-
-            if (topNode->getParent() != targetPage) {
-                topNode->retain();
-                topNode->removeFromParentAndCleanup(false);
-                targetPage->addChild(topNode);
-                topNode->release();
-            }
-
-            if (i % 2 == 0) {
-                if (i == activeNodes.size() - 1) {
-                    topNode->setPosition(CCPoint(winSize.width / 2.0f, posLeft.y));
-                } else {
-                    topNode->setPosition(posLeft);
-                }
-            } else {
-                topNode->setPosition(posRight);
-            }
-        }
-
-        m_scrollLayer->updatePages();
-        m_scrollLayer->updateDots(0);
-        m_scrollLayer->moveToPage(0);
     }
 };
 
