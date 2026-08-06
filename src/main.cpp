@@ -3,6 +3,7 @@
 #include <Geode/modify/LevelBrowserLayer.hpp>
 #include <Geode/binding/GameLevelManager.hpp>
 #include <Geode/binding/GJMapPack.hpp>
+#include <Geode/binding/GJSearchObject.hpp>
 
 using namespace geode::prelude;
 
@@ -39,6 +40,21 @@ static void filterDictionary(cocos2d::CCDictionary* dict) {
     }
     for (int k : intKeys) {
         dict->removeObjectForKey(k);
+    }
+}
+
+static void filterArray(cocos2d::CCArray* arr) {
+    if (!arr) return;
+    auto toRemove = CCArray::create();
+    for (auto obj : CCArrayExt<CCObject*>(arr)) {
+        if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
+            if (isCompletedPack(pack)) {
+                toRemove->addObject(pack);
+            }
+        }
+    }
+    for (auto obj : CCArrayExt<CCObject*>(toRemove)) {
+        arr->removeObject(obj);
     }
 }
 
@@ -101,6 +117,14 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
 
 class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
     bool init(GJSearchObject* object) {
+        if (object && object->m_searchType == SearchType::MapPack) {
+            if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks")) {
+                if (auto glm = GameLevelManager::sharedState()) {
+                    filterDictionary(glm->m_savedPacks);
+                }
+            }
+        }
+
         if (!LevelBrowserLayer::init(object)) return false;
 
         if (object && object->m_searchType == SearchType::MapPack) {
@@ -119,13 +143,13 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
                 auto toggler = CCMenuItemToggler::create(offSpr, onSpr, this, menu_selector(MyLevelBrowserLayer::onToggleHideCompleted));
                 bool isHiding = Mod::get()->getSettingValue<bool>("hide-completed-mappacks");
                 toggler->toggle(isHiding);
-                toggler->setPosition({winSize.width - 30.0f, winSize.height - 25.0f});
+                toggler->setPosition({winSize.width - 30.0f, 25.0f});
                 toggler->setID("hide-completed-toggler"_spr);
                 menu->addChild(toggler);
 
                 auto label = CCLabelBMFont::create("Hide", "bigFont.fnt");
                 label->setScale(0.35f);
-                label->setPosition({winSize.width - 65.0f, winSize.height - 25.0f});
+                label->setPosition({winSize.width - 65.0f, 25.0f});
                 label->setID("hide-completed-label"_spr);
                 this->addChild(label, 100);
             }
@@ -135,35 +159,17 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
     }
 
     void setupLevelBrowser(cocos2d::CCArray* items) {
-        if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks") && items) {
-            auto toRemove = CCArray::create();
-            for (auto obj : CCArrayExt<CCObject*>(items)) {
-                if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-                    if (isCompletedPack(pack)) {
-                        toRemove->addObject(pack);
-                    }
-                }
-            }
-            for (auto obj : CCArrayExt<CCObject*>(toRemove)) {
-                items->removeObject(obj);
-            }
+        if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks")) {
+            filterArray(items);
+            filterArray(m_levels);
         }
         LevelBrowserLayer::setupLevelBrowser(items);
     }
 
     void loadLevelsFinished(cocos2d::CCArray* levels, char const* key, int type) {
-        if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks") && levels) {
-            auto toRemove = CCArray::create();
-            for (auto obj : CCArrayExt<CCObject*>(levels)) {
-                if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-                    if (isCompletedPack(pack)) {
-                        toRemove->addObject(pack);
-                    }
-                }
-            }
-            for (auto obj : CCArrayExt<CCObject*>(toRemove)) {
-                levels->removeObject(obj);
-            }
+        if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks")) {
+            filterArray(levels);
+            filterArray(m_levels);
         }
         LevelBrowserLayer::loadLevelsFinished(levels, key, type);
     }
