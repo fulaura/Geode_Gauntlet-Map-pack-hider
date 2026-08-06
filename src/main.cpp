@@ -160,6 +160,10 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
 };
 
 class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
+    struct Fields {
+        int m_previousPage = 0;
+    };
+
     bool init(GJSearchObject* object) {
         if (object && object->m_searchType == SearchType::MapPack) {
             if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks")) {
@@ -212,8 +216,42 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
 
     void loadLevelsFinished(cocos2d::CCArray* levels, char const* key, int type) {
         if (m_searchObject && m_searchObject->m_searchType == SearchType::MapPack && Mod::get()->getSettingValue<bool>("hide-completed-mappacks")) {
-            filterArray(levels);
-            filterArray(m_levels);
+            if (levels) {
+                filterArray(levels);
+                if (m_levels) filterArray(m_levels);
+
+                if (levels->count() == 0) {
+                    bool movingForward = m_searchObject->m_page >= m_fields->m_previousPage;
+                    int maxPages = 7; // Map Packs has 65 items ~ 7 pages
+
+                    if (movingForward) {
+                        if (m_searchObject->m_page + 1 < maxPages) {
+                            m_fields->m_previousPage = m_searchObject->m_page;
+                            m_searchObject->m_page++;
+                            this->loadPage(m_searchObject);
+                            return;
+                        } else if (m_searchObject->m_page > 0) {
+                            m_fields->m_previousPage = m_searchObject->m_page;
+                            m_searchObject->m_page--;
+                            this->loadPage(m_searchObject);
+                            return;
+                        }
+                    } else {
+                        if (m_searchObject->m_page > 0) {
+                            m_fields->m_previousPage = m_searchObject->m_page;
+                            m_searchObject->m_page--;
+                            this->loadPage(m_searchObject);
+                            return;
+                        } else if (m_searchObject->m_page + 1 < maxPages) {
+                            m_fields->m_previousPage = m_searchObject->m_page;
+                            m_searchObject->m_page++;
+                            this->loadPage(m_searchObject);
+                            return;
+                        }
+                    }
+                }
+                m_fields->m_previousPage = m_searchObject->m_page;
+            }
         }
         LevelBrowserLayer::loadLevelsFinished(levels, key, type);
     }
@@ -222,6 +260,7 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
         bool current = Mod::get()->getSettingValue<bool>("hide-completed-mappacks");
         Mod::get()->setSettingValue("hide-completed-mappacks", !current);
         if (m_searchObject) {
+            m_fields->m_previousPage = 0;
             this->loadPage(m_searchObject);
         }
     }
