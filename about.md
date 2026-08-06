@@ -1,8 +1,8 @@
 # Hide Completed Packs
 
-Hides completed Map Packs and Gauntlets in Geometry Dash.
+Hides completed Gauntlets in Geometry Dash.
 
-- Separate toggles for Map Packs and Gauntlets.
-- In-game "Hide" toggle button on Map Packs and Gauntlets screens.
+- In-game "Hide" toggle button on the Gauntlets screen.
+- Clean page repacking without empty pages or broken page indicators.
 
 Mod by RealNitroGame.

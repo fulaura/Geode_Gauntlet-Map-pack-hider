@@ -7,18 +7,12 @@
 	"name": "Hide Completed Packs",
 	"version": "v1.0.0",
 	"developer": "RealNitroGame",
-	"description": "Hides completed Map Packs and Gauntlets from the menu.",
+	"description": "Hides completed Gauntlets from the menu.",
 	"repository": "https://github.com/fulaura/Geode_Gauntlet-Map-pack-hider",
 	"settings": {
 		"hide-completed-gauntlets": {
 			"name": "Hide Completed Gauntlets",
 			"description": "Hides Gauntlets that you have fully completed.",
-			"type": "bool",
-			"default": true
-		},
-		"hide-completed-mappacks": {
-			"name": "Hide Completed Map Packs",
-			"description": "Hides Map Packs that you have fully completed.",
 			"type": "bool",
 			"default": true
 		}
