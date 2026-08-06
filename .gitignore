@@ -1,0 +1,6 @@
+build/
+*.geode
+.vs/
+bin/
+obj/
+.DS_Store

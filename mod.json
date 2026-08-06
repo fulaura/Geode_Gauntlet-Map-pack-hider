@@ -1,0 +1,19 @@
+{
+	"geode": "5.8.2",
+	"gd": {
+		"win": "2.2081"
+	},
+	"id": "realnitrogame.hide-completed-packs",
+	"name": "Hide Completed Packs",
+	"version": "v1.0.0",
+	"developer": "RealNitroGame",
+	"description": "Dynamically hides completed Map Packs and Gauntlets with full page layout repack.",
+	"settings": {
+		"hide-completed": {
+			"name": "Hide Completed Packs & Gauntlets",
+			"description": "When enabled, Map Packs and Gauntlets that you have fully completed will be hidden and page layouts will be repacked cleanly.",
+			"type": "bool",
+			"default": true
+		}
+	}
+}
