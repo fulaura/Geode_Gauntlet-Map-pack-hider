@@ -12,39 +12,43 @@ static bool isCompletedPack(GJMapPack* pack) {
            GameStatsManager::sharedState()->hasCompletedMapPack(pack->m_packID);
 }
 
-static cocos2d::CCDictionary* getFilteredGauntlets(cocos2d::CCDictionary* src) {
-    if (!src) return nullptr;
-    auto dict = CCDictionary::create();
+static void filterDictionary(cocos2d::CCDictionary* dict) {
+    if (!dict) return;
 
-    for (auto [key, obj] : CCDictionaryExt<std::string, CCObject*>(src)) {
+    std::vector<std::string> strKeys;
+    std::vector<int> intKeys;
+
+    for (auto [key, obj] : CCDictionaryExt<std::string, CCObject*>(dict)) {
         if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-            if (!isCompletedPack(pack)) {
-                dict->setObject(obj, key);
+            if (isCompletedPack(pack)) {
+                strKeys.push_back(key);
             }
-        } else {
-            dict->setObject(obj, key);
         }
     }
 
-    for (auto [key, obj] : CCDictionaryExt<int, CCObject*>(src)) {
+    for (auto [key, obj] : CCDictionaryExt<int, CCObject*>(dict)) {
         if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
-            if (!isCompletedPack(pack)) {
-                dict->setObject(obj, key);
+            if (isCompletedPack(pack)) {
+                intKeys.push_back(key);
             }
-        } else {
-            dict->setObject(obj, key);
         }
     }
 
-    return dict;
+    for (const auto& k : strKeys) {
+        dict->removeObjectForKey(k);
+    }
+    for (int k : intKeys) {
+        dict->removeObjectForKey(k);
+    }
 }
 
 class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
-    struct Fields {
-        cocos2d::CCDictionary* m_originalGauntlets = nullptr;
-    };
-
     bool init(int unused) {
+        if (Mod::get()->getSettingValue<bool>("hide-completed-gauntlets")) {
+            if (auto glm = GameLevelManager::sharedState()) {
+                filterDictionary(glm->m_savedGauntlets);
+            }
+        }
         if (!GauntletSelectLayer::init(unused)) return false;
 
         auto winSize = CCDirector::sharedDirector()->getWinSize();
@@ -79,14 +83,10 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
     void setupGauntlets() {
         if (Mod::get()->getSettingValue<bool>("hide-completed-gauntlets")) {
             if (m_gauntlets) {
-                if (!m_fields->m_originalGauntlets) {
-                    m_fields->m_originalGauntlets = m_gauntlets;
-                }
-                m_gauntlets = getFilteredGauntlets(m_fields->m_originalGauntlets);
+                filterDictionary(m_gauntlets);
             }
-        } else {
-            if (m_fields->m_originalGauntlets) {
-                m_gauntlets = m_fields->m_originalGauntlets;
+            if (auto glm = GameLevelManager::sharedState()) {
+                filterDictionary(glm->m_savedGauntlets);
             }
         }
         GauntletSelectLayer::setupGauntlets();
@@ -95,7 +95,7 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
     void onToggleHideCompleted(CCObject* sender) {
         bool current = Mod::get()->getSettingValue<bool>("hide-completed-gauntlets");
         Mod::get()->setSettingValue("hide-completed-gauntlets", !current);
-        CCDirector::sharedDirector()->replaceScene(CCTransitionFade::create(0.3f, GauntletSelectLayer::scene(0)));
+        CCDirector::sharedDirector()->replaceScene(CCTransitionFade::create(0.4f, GauntletSelectLayer::scene(0)));
     }
 };
 
