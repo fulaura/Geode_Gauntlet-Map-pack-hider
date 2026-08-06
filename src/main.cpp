@@ -44,7 +44,7 @@ static void filterDictionary(cocos2d::CCDictionary* dict) {
 
 class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
     bool init(int unused) {
-        if (Mod::get()->getSettingValue<bool>("hide-completed")) {
+        if (Mod::get()->getSettingValue<bool>("hide-completed-gauntlets")) {
             if (auto glm = GameLevelManager::sharedState()) {
                 filterDictionary(glm->m_savedGauntlets);
             }
@@ -64,7 +64,7 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
             onSpr->setScale(0.8f);
 
             auto toggler = CCMenuItemToggler::create(offSpr, onSpr, this, menu_selector(MyGauntletSelectLayer::onToggleHideCompleted));
-            bool isHiding = Mod::get()->getSettingValue<bool>("hide-completed");
+            bool isHiding = Mod::get()->getSettingValue<bool>("hide-completed-gauntlets");
             toggler->toggle(isHiding);
             toggler->setPosition({winSize.width - 30.0f, 30.0f});
             toggler->setID("hide-completed-toggler"_spr);
@@ -81,7 +81,7 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
     }
 
     void setupGauntlets() {
-        if (Mod::get()->getSettingValue<bool>("hide-completed")) {
+        if (Mod::get()->getSettingValue<bool>("hide-completed-gauntlets")) {
             if (m_gauntlets) {
                 filterDictionary(m_gauntlets);
             }
@@ -93,8 +93,8 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
     }
 
     void onToggleHideCompleted(CCObject* sender) {
-        bool current = Mod::get()->getSettingValue<bool>("hide-completed");
-        Mod::get()->setSettingValue("hide-completed", !current);
+        bool current = Mod::get()->getSettingValue<bool>("hide-completed-gauntlets");
+        Mod::get()->setSettingValue("hide-completed-gauntlets", !current);
         CCDirector::sharedDirector()->replaceScene(CCTransitionFade::create(0.4f, GauntletSelectLayer::scene(0)));
     }
 };
@@ -117,7 +117,7 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
                 onSpr->setScale(0.8f);
 
                 auto toggler = CCMenuItemToggler::create(offSpr, onSpr, this, menu_selector(MyLevelBrowserLayer::onToggleHideCompleted));
-                bool isHiding = Mod::get()->getSettingValue<bool>("hide-completed");
+                bool isHiding = Mod::get()->getSettingValue<bool>("hide-completed-mappacks");
                 toggler->toggle(isHiding);
                 toggler->setPosition({winSize.width - 30.0f, 30.0f});
                 toggler->setID("hide-completed-toggler"_spr);
@@ -135,7 +135,7 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
     }
 
     void setupLevelBrowser(cocos2d::CCArray* items) {
-        if (Mod::get()->getSettingValue<bool>("hide-completed") && items) {
+        if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks") && items) {
             auto toRemove = CCArray::create();
             for (auto obj : CCArrayExt<CCObject*>(items)) {
                 if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
@@ -152,7 +152,7 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
     }
 
     void loadLevelsFinished(cocos2d::CCArray* levels, char const* key, int type) {
-        if (Mod::get()->getSettingValue<bool>("hide-completed") && levels) {
+        if (Mod::get()->getSettingValue<bool>("hide-completed-mappacks") && levels) {
             auto toRemove = CCArray::create();
             for (auto obj : CCArrayExt<CCObject*>(levels)) {
                 if (auto pack = typeinfo_cast<GJMapPack*>(obj)) {
@@ -169,8 +169,8 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
     }
 
     void onToggleHideCompleted(CCObject* sender) {
-        bool current = Mod::get()->getSettingValue<bool>("hide-completed");
-        Mod::get()->setSettingValue("hide-completed", !current);
+        bool current = Mod::get()->getSettingValue<bool>("hide-completed-mappacks");
+        Mod::get()->setSettingValue("hide-completed-mappacks", !current);
         if (m_searchObject) {
             this->loadPage(m_searchObject);
         }
