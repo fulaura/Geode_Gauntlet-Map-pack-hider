@@ -1,6 +1,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/GauntletSelectLayer.hpp>
 #include <Geode/modify/LevelBrowserLayer.hpp>
+#include <Geode/modify/CustomListView.hpp>
 #include <Geode/binding/GameLevelManager.hpp>
 #include <Geode/binding/GJMapPack.hpp>
 #include <Geode/binding/GJSearchObject.hpp>
@@ -9,8 +10,16 @@ using namespace geode::prelude;
 
 static bool isCompletedPack(GJMapPack* pack) {
     if (!pack) return false;
-    return pack->hasCompletedMapPack() || 
-           GameStatsManager::sharedState()->hasCompletedMapPack(pack->m_packID);
+    if (pack->hasCompletedMapPack()) return true;
+    if (auto gsm = GameStatsManager::sharedState()) {
+        if (gsm->hasCompletedMapPack(pack->m_packID)) return true;
+        if (gsm->m_completedMappacks) {
+            auto keyStr = std::to_string(pack->m_packID);
+            if (gsm->m_completedMappacks->objectForKey(keyStr)) return true;
+            if (gsm->m_completedMappacks->objectForKey(pack->m_packID)) return true;
+        }
+    }
+    return false;
 }
 
 static void filterDictionary(cocos2d::CCDictionary* dict) {
@@ -57,6 +66,15 @@ static void filterArray(cocos2d::CCArray* arr) {
         arr->removeObject(obj);
     }
 }
+
+class $modify(MyCustomListView, CustomListView) {
+    bool init(cocos2d::CCArray* entries, TableViewCellDelegate* delegate, float height, float width, int page, BoomListType type, float y) {
+        if (type == BoomListType::MapPack && Mod::get()->getSettingValue<bool>("hide-completed-mappacks") && entries) {
+            filterArray(entries);
+        }
+        return CustomListView::init(entries, delegate, height, width, page, type, y);
+    }
+};
 
 class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
     bool init(int unused) {
