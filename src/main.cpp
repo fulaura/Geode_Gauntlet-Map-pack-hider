@@ -51,6 +51,7 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
         }
         if (!GauntletSelectLayer::init(unused)) return false;
 
+        auto winSize = CCDirector::sharedDirector()->getWinSize();
         auto menu = CCMenu::create();
         menu->setPosition({0, 0});
         menu->setID("hide-completed-menu"_spr);
@@ -65,13 +66,13 @@ class $modify(MyGauntletSelectLayer, GauntletSelectLayer) {
             auto toggler = CCMenuItemToggler::create(offSpr, onSpr, this, menu_selector(MyGauntletSelectLayer::onToggleHideCompleted));
             bool isHiding = Mod::get()->getSettingValue<bool>("hide-completed-gauntlets");
             toggler->toggle(isHiding);
-            toggler->setPosition({60.0f, 25.0f});
+            toggler->setPosition({winSize.width - 30.0f, winSize.height - 25.0f});
             toggler->setID("hide-completed-toggler"_spr);
             menu->addChild(toggler);
 
             auto label = CCLabelBMFont::create("Hide", "bigFont.fnt");
             label->setScale(0.35f);
-            label->setPosition({95.0f, 25.0f});
+            label->setPosition({winSize.width - 65.0f, winSize.height - 25.0f});
             label->setID("hide-completed-label"_spr);
             this->addChild(label, 100);
         }
@@ -103,6 +104,7 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
         if (!LevelBrowserLayer::init(object)) return false;
 
         if (object && object->m_searchType == SearchType::MapPack) {
+            auto winSize = CCDirector::sharedDirector()->getWinSize();
             auto menu = CCMenu::create();
             menu->setPosition({0, 0});
             menu->setID("hide-completed-menu"_spr);
@@ -117,13 +119,13 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
                 auto toggler = CCMenuItemToggler::create(offSpr, onSpr, this, menu_selector(MyLevelBrowserLayer::onToggleHideCompleted));
                 bool isHiding = Mod::get()->getSettingValue<bool>("hide-completed-mappacks");
                 toggler->toggle(isHiding);
-                toggler->setPosition({60.0f, 25.0f});
+                toggler->setPosition({winSize.width - 30.0f, winSize.height - 25.0f});
                 toggler->setID("hide-completed-toggler"_spr);
                 menu->addChild(toggler);
 
                 auto label = CCLabelBMFont::create("Hide", "bigFont.fnt");
                 label->setScale(0.35f);
-                label->setPosition({95.0f, 25.0f});
+                label->setPosition({winSize.width - 65.0f, winSize.height - 25.0f});
                 label->setID("hide-completed-label"_spr);
                 this->addChild(label, 100);
             }
